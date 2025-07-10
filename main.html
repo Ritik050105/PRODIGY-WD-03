@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe with AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding-top: 30px;
+        }
+        .game-container {
+            max-width: 450px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .game-board {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .cell {
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 3px solid #333 !important;
+            transition: background 0.2s;
+        }
+        .cell:hover {
+            background-color: #f8f9fa;
+        }
+        .cell.x {
+            color: #dc3545;
+        }
+        .cell.o {
+            color: #0d6efd;
+        }
+        /* Remove double borders */
+        .cell.top {
+            border-top: none !important;
+        }
+        .cell.bottom {
+            border-bottom: none !important;
+        }
+        .cell.left {
+            border-left: none !important;
+        }
+        .cell.right {
+            border-right: none !important;
+        }
+        .status {
+            font-size: 1.3rem;
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        .mode-selector {
+            margin-bottom: 20px;
+        }
+        .btn-mode {
+            width: 180px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container game-container">
+        <h1 class="text-center mb-4">Tic Tac Toe</h1>
+        
+        <div class="mode-selector text-center">
+            <div class="btn-group">
+                <button id="pvp-btn" class="btn btn-primary btn-mode active">Player vs Player</button>
+                <button id="pvc-btn" class="btn btn-outline-primary btn-mode">Player vs AI</button>
+            </div>
+        </div>
+        
+        <div class="game-board">
+            <div class="row g-0">
+                <div class="col-4 cell top left" data-index="0"></div>
+                <div class="col-4 cell top" data-index="1"></div>
+                <div class="col-4 cell top right" data-index="2"></div>
+            </div>
+            <div class="row g-0">
+                <div class="col-4 cell left" data-index="3"></div>
+                <div class="col-4 cell" data-index="4"></div>
+                <div class="col-4 cell right" data-index="5"></div>
+            </div>
+            <div class="row g-0">
+                <div class="col-4 cell bottom left" data-index="6"></div>
+                <div class="col-4 cell bottom" data-index="7"></div>
+                <div class="col-4 cell bottom right" data-index="8"></div>
+            </div>
+        </div>
+        
+        <div class="status alert alert-info text-center">
+            Player X's Turn
+        </div>
+        
+        <div class="controls text-center">
+            <button id="reset-btn" class="btn btn-primary btn-lg">Reset Game</button>
+        </div>
+        
+        <div class="game-status alert text-center mt-3 d-none"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Game elements
+            const cells = document.querySelectorAll('.cell');
+            const statusDisplay = document.querySelector('.status');
+            const gameStatusDisplay = document.querySelector('.game-status');
+            const resetButton = document.getElementById('reset-btn');
+            const pvpButton = document.getElementById('pvp-btn');
+            const pvcButton = document.getElementById('pvc-btn');
+            
+            // Game variables
+            let gameActive = true;
+            let currentPlayer = "X";
+            let gameState = ["", "", "", "", "", "", "", "", ""];
+            let gameMode = "pvp"; // 'pvp' or 'pvc'
+            
+            // Winning conditions
+            const winningConditions = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+                [0, 4, 8], [2, 4, 6] // diagonals
+            ];
+            
+            // Handle cell click
+            function handleCellClick(clickedCellEvent) {
+                const clickedCell = clickedCellEvent.target;
+                const clickedCellIndex = parseInt(clickedCell.getAttribute('data-index'));
+                
+                if (gameState[clickedCellIndex] !== "" || !gameActive) return;
+                
+                // Make player move
+                makeMove(clickedCellIndex, currentPlayer);
+                
+                // If playing against AI and game is still active
+                if (gameMode === "pvc" && gameActive && currentPlayer === "O") {
+                    setTimeout(makeAIMove, 500);
+                }
+            }
+            
+            // Make a move
+            function makeMove(index, player) {
+                gameState[index] = player;
+                cells[index].innerHTML = player;
+                cells[index].classList.add(player.toLowerCase());
+                checkResult();
+            }
+            
+            // Check for win or draw
+            function checkResult() {
+                let roundWon = false;
+                
+                for (let i = 0; i < winningConditions.length; i++) {
+                    const [a, b, c] = winningConditions[i];
+                    
+                    if (gameState[a] === "" || gameState[b] === "" || gameState[c] === "") continue;
+                    if (gameState[a] === gameState[b] && gameState[b] === gameState[c]) {
+                        roundWon = true;
+                        break;
+                    }
+                }
+                
+                if (roundWon) {
+                    gameStatusDisplay.innerHTML = `Player ${currentPlayer} wins!`;
+                    gameStatusDisplay.className = "game-status alert alert-success text-center";
+                    gameStatusDisplay.classList.remove("d-none");
+                    gameActive = false;
+                    return;
+                }
+                
+                if (!gameState.includes("")) {
+                    gameStatusDisplay.innerHTML = "Game ended in a draw!";
+                    gameStatusDisplay.className = "game-status alert alert-warning text-center";
+                    gameStatusDisplay.classList.remove("d-none");
+                    gameActive = false;
+                    return;
+                }
+                
+                // Switch player
+                currentPlayer = currentPlayer === "X" ? "O" : "X";
+                statusDisplay.innerHTML = `Player ${currentPlayer}'s Turn`;
+                statusDisplay.className = `alert alert-${currentPlayer === "X" ? "info" : "primary"} text-center`;
+            }
+            
+            // AI move logic
+            function makeAIMove() {
+                if (!gameActive) return;
+                
+                // Simple AI strategy:
+                // 1. Try to win
+                // 2. Block player from winning
+                // 3. Take center if available
+                // 4. Take a random corner
+                // 5. Take any available space
+                
+                let bestMove = findWinningMove("O"); // Try to win
+                if (bestMove === -1) bestMove = findWinningMove("X"); // Block player
+                if (bestMove === -1 && gameState[4] === "") bestMove = 4; // Take center
+                if (bestMove === -1) bestMove = randomCorner(); // Random corner
+                if (bestMove === -1) bestMove = randomAvailable(); // Any available
+                
+                if (bestMove !== -1) {
+                    makeMove(bestMove, "O");
+                }
+            }
+            
+            // Find winning move for specified player
+            function findWinningMove(player) {
+                for (let i = 0; i < winningConditions.length; i++) {
+                    const [a, b, c] = winningConditions[i];
+                    
+                    if (gameState[a] === player && gameState[b] === player && gameState[c] === "") return c;
+                    if (gameState[a] === player && gameState[c] === player && gameState[b] === "") return b;
+                    if (gameState[b] === player && gameState[c] === player && gameState[a] === "") return a;
+                }
+                return -1;
+            }
+            
+            // Choose random corner
+            function randomCorner() {
+                const corners = [0, 2, 6, 8];
+                const available = corners.filter(index => gameState[index] === "");
+                return available.length > 0 ? available[Math.floor(Math.random() * available.length)] : -1;
+            }
+            
+            // Choose random available move
+            function randomAvailable() {
+                const available = gameState.map((cell, index) => cell === "" ? index : -1).filter(i => i !== -1);
+                return available.length > 0 ? available[Math.floor(Math.random() * available.length)] : -1;
+            }
+            
+            // Reset game
+            function resetGame() {
+                gameActive = true;
+                currentPlayer = "X";
+                gameState = ["", "", "", "", "", "", "", "", ""];
+                statusDisplay.innerHTML = `Player ${currentPlayer}'s Turn`;
+                statusDisplay.className = "alert alert-info text-center";
+                gameStatusDisplay.className = "game-status alert text-center d-none";
+                cells.forEach(cell => {
+                    cell.innerHTML = "";
+                    cell.classList.remove("x", "o");
+                });
+                
+                // If AI goes first in PVC mode
+                if (gameMode === "pvc" && currentPlayer === "O") {
+                    setTimeout(makeAIMove, 500);
+                }
+            }
+            
+            // Set game mode
+            function setGameMode(mode) {
+                gameMode = mode;
+                pvpButton.classList.toggle("active", mode === "pvp");
+                pvcButton.classList.toggle("active", mode === "pvc");
+                pvpButton.className = mode === "pvp" ? "btn btn-primary btn-mode" : "btn btn-outline-primary btn-mode";
+                pvcButton.className = mode === "pvc" ? "btn btn-primary btn-mode" : "btn btn-outline-primary btn-mode";
+                resetGame();
+            }
+            
+            // Event listeners
+            cells.forEach(cell => cell.addEventListener('click', handleCellClick));
+            resetButton.addEventListener('click', resetGame);
+            pvpButton.addEventListener('click', () => setGameMode("pvp"));
+            pvcButton.addEventListener('click', () => setGameMode("pvc"));
+        });
+    </script>
+</body>
+</html>
